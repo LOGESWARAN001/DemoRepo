@@ -48,8 +48,8 @@
         // Validate expression: only digits, operators + - * / parentheses and decimal point allowed
         if (/^[0-9+\-*/. ()]+$/.test(expression)) {
           try {
-            // Safe evaluation without eval
-            const result = safeEval(expression);
+            // Safe evaluation without eval or Function constructor
+            const result = evaluateExpression(expression);
             if (typeof result === 'number' && isFinite(result)) {
               document.forms.display.value = result;
             } else {
@@ -63,8 +63,8 @@
         }
       }
 
-      // Simple safe evaluator for arithmetic expressions
-      function safeEval(expr) {
+      // Evaluate arithmetic expression safely without using Function constructor or eval
+      function evaluateExpression(expr) {
         // Remove all spaces
         expr = expr.replace(/\s+/g, '');
 
@@ -73,29 +73,88 @@
           throw new Error('Invalid characters');
         }
 
-        // Use Function constructor to create a safe function
-        // This is safer than eval because it does not have access to local scope
-        // but still should be used carefully
-        // To be safer, reject expressions with consecutive operators or invalid syntax
-
-        // Basic syntax check: no two operators in a row (except for unary minus)
+        // Basic syntax checks
         if (/[^0-9)]\s*[-+*/]{2,}/.test(expr) || /\(\)/.test(expr)) {
           throw new Error('Invalid syntax');
         }
 
-        // Disallow expressions starting or ending with operators except unary minus at start
         if (/^[+*/]/.test(expr) || /[-+*/]$/.test(expr)) {
           throw new Error('Invalid syntax');
         }
 
-        // Evaluate using Function constructor
-        // eslint-disable-next-line no-new-func
-        const func = new Function('return ' + expr);
-        const val = func();
-        if (typeof val !== 'number' || !isFinite(val)) {
-          throw new Error('Invalid result');
+        // Parse and evaluate the expression using a safe parser
+        return parseExpression(expr);
+      }
+
+      // Recursive descent parser for arithmetic expressions
+      function parseExpression(expr) {
+        let index = 0;
+
+        function peek() {
+          return expr[index] || '';
         }
-        return val;
+
+        function get() {
+          return expr[index++] || '';
+        }
+
+        function parseNumber() {
+          let numStr = '';
+          while (/[0-9.]/.test(peek())) {
+            numStr += get();
+          }
+          if (numStr === '' || numStr.split('.').length > 2) {
+            throw new Error('Invalid number');
+          }
+          return parseFloat(numStr);
+        }
+
+        function parseFactor() {
+          if (peek() === '(') {
+            get(); // consume '('
+            const val = parseAddSub();
+            if (get() !== ')') {
+              throw new Error('Expected )');
+            }
+            return val;
+          } else if (peek() === '-') {
+            get();
+            return -parseFactor();
+          } else {
+            return parseNumber();
+          }
+        }
+
+        function parseMulDiv() {
+          let val = parseFactor();
+          while (peek() === '*' || peek() === '/') {
+            const op = get();
+            const nextVal = parseFactor();
+            if (op === '*') val *= nextVal;
+            else {
+              if (nextVal === 0) throw new Error('Division by zero');
+              val /= nextVal;
+            }
+          }
+          return val;
+        }
+
+        function parseAddSub() {
+          let val = parseMulDiv();
+          while (peek() === '+' || peek() === '-') {
+            const op = get();
+            const nextVal = parseMulDiv();
+            if (op === '+') val += nextVal;
+            else val -= nextVal;
+          }
+          return val;
+        }
+
+        const result = parseAddSub();
+        if (index < expr.length) {
+          throw new Error('Unexpected characters');
+        }
+        return result;
       }
     </script>
   </body>
