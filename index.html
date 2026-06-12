@@ -36,13 +36,28 @@
             type="button"
             id="equal"
             value="="
-            onclick="
-              document.forms.display.value = eval(document.forms.display.value)
-            "
+            onclick="calculate()"
           />
         </div>
       </form>
     </div>
     <script type="text/javascript" charset="utf-8" src="js/index.js"></script>
+    <script>
+      function calculate() {
+        const expression = document.forms.display.value;
+        // Validate expression: only digits, operators + - * / and decimal point allowed
+        if (/^[0-9+\-*/. ()]+$/.test(expression)) {
+          try {
+            // Use Function constructor to evaluate safely
+            const result = Function('return ' + expression)();
+            document.forms.display.value = result;
+          } catch (e) {
+            alert('Invalid expression');
+          }
+        } else {
+          alert('Invalid characters in expression');
+        }
+      }
+    </script>
   </body>
 </html>
