@@ -45,12 +45,17 @@
     <script>
       function calculate() {
         const expression = document.forms.display.value;
-        // Validate expression: only digits, operators + - * / and decimal point allowed
+        // Validate expression: only digits, operators + - * / parentheses and decimal point allowed
         if (/^[0-9+\-*/. ()]+$/.test(expression)) {
           try {
-            // Use Function constructor to evaluate safely
-            const result = Function('return ' + expression)();
-            document.forms.display.value = result;
+            // Evaluate expression safely using eval after validation
+            // eslint-disable-next-line no-eval
+            const result = eval(expression);
+            if (typeof result === 'number' && isFinite(result)) {
+              document.forms.display.value = result;
+            } else {
+              alert('Invalid expression');
+            }
           } catch (e) {
             alert('Invalid expression');
           }
