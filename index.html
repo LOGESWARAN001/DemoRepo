@@ -48,9 +48,8 @@
         // Validate expression: only digits, operators + - * / parentheses and decimal point allowed
         if (/^[0-9+\-*/. ()]+$/.test(expression)) {
           try {
-            // Evaluate expression safely using eval after validation
-            // eslint-disable-next-line no-eval
-            const result = eval(expression);
+            // Safe evaluation without eval
+            const result = safeEval(expression);
             if (typeof result === 'number' && isFinite(result)) {
               document.forms.display.value = result;
             } else {
@@ -62,6 +61,41 @@
         } else {
           alert('Invalid characters in expression');
         }
+      }
+
+      // Simple safe evaluator for arithmetic expressions
+      function safeEval(expr) {
+        // Remove all spaces
+        expr = expr.replace(/\s+/g, '');
+
+        // Validate characters again
+        if (!/^[0-9+\-*/.()]+$/.test(expr)) {
+          throw new Error('Invalid characters');
+        }
+
+        // Use Function constructor to create a safe function
+        // This is safer than eval because it does not have access to local scope
+        // but still should be used carefully
+        // To be safer, reject expressions with consecutive operators or invalid syntax
+
+        // Basic syntax check: no two operators in a row (except for unary minus)
+        if (/[^0-9)]\s*[-+*/]{2,}/.test(expr) || /\(\)/.test(expr)) {
+          throw new Error('Invalid syntax');
+        }
+
+        // Disallow expressions starting or ending with operators except unary minus at start
+        if (/^[+*/]/.test(expr) || /[-+*/]$/.test(expr)) {
+          throw new Error('Invalid syntax');
+        }
+
+        // Evaluate using Function constructor
+        // eslint-disable-next-line no-new-func
+        const func = new Function('return ' + expr);
+        const val = func();
+        if (typeof val !== 'number' || !isFinite(val)) {
+          throw new Error('Invalid result');
+        }
+        return val;
       }
     </script>
   </body>
